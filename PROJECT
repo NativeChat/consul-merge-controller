@@ -1,5 +1,6 @@
 domain: consul.k8s.nativechat.com
 layout: go.kubebuilder.io/v3
+multigroup: true
 projectName: consul-merge-controller
 repo: github.com/NativeChat/consul-merge-controller
 version: 3-alpha
