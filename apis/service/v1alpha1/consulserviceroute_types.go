@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +29,8 @@ type ConsulServiceRouteSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ConsulServiceRoute. Edit ConsulServiceRoute_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ServiceRouter string                 `json:"serviceRouter"`
+	Route         consulk8s.ServiceRoute `json:"route"`
 }
 
 // ConsulServiceRouteStatus defines the observed state of ConsulServiceRoute
