@@ -12,7 +12,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= nchatsystem/consul-merge-controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -74,7 +74,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build: #test
 	docker build -t ${IMG} .
 
 # Push the docker image
@@ -117,3 +117,18 @@ bundle: manifests kustomize
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Temporary hack until consul-k8s updates its controller-runtime
+GO_MOD_DEPS_DIR ?= vendor
+CONSUL_K8S_VERSION ?= ""
+CONSUL_K8S_DIR ?= $(GO_MOD_DEPS_DIR)/github.com/hashicorp/consul-k8s$(CONSUL_K8S_VERSION)
+SED_FLAGS ?= $(shell echo $$OSTYPE | grep -q darwin && echo "-i ''" || echo "-i")
+.PHONY: go-mod-vendor-hack
+go-mod-vendor-hack:
+	sed $(SED_FLAGS) -e 's-"k8s.io/api/admission/v1beta1"--' "$(CONSUL_K8S_DIR)/api/common/configentry_webhook.go"
+	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Create-req.Operation == "CREATE"-' "$(CONSUL_K8S_DIR)/api/common/configentry_webhook.go"
+	sed $(SED_FLAGS) -e 's-"k8s.io/api/admission/v1beta1"--' "$(CONSUL_K8S_DIR)/api/v1alpha1/proxydefaults_webhook.go"
+	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Create-req.Operation == "CREATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/proxydefaults_webhook.go"
+	sed $(SED_FLAGS) -e 's-"k8s.io/api/admission/v1beta1"--' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
+	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Create-req.Operation == "CREATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
+	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Update-req.Operation == "UPDATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,10 @@ type ConsulServiceRouteReconciler struct {
 // +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceroutes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceroutes/finalizers,verbs=update
 
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters/finalizers,verbs=update
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
@@ -48,9 +53,9 @@ type ConsulServiceRouteReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("consulserviceroute", req.NamespacedName)
+	logger := r.Log.WithValues("consulserviceroute", req.NamespacedName)
 
-	// your logic here
+	logger.Info("IT WORKS!")
 
 	return ctrl.Result{}, nil
 }
@@ -59,5 +64,6 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 func (r *ConsulServiceRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicev1alpha1.ConsulServiceRoute{}).
+		Owns(&consulk8s.ServiceRouter{}).
 		Complete(r)
 }

@@ -8,6 +8,8 @@ COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
+COPY Makefile Makefile
+RUN make go-mod-vendor-hack GO_MOD_DEPS_DIR=/go/pkg/mod CONSUL_K8S_VERSION=@v0.23.0
 
 # Copy the go source
 COPY main.go main.go
