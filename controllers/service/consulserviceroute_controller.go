@@ -18,14 +18,18 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
+	controllerlabels "github.com/NativeChat/consul-merge-controller/pkg/labels"
+	"github.com/NativeChat/consul-merge-controller/pkg/services"
 )
 
 // ConsulServiceRouteReconciler reconciles a ConsulServiceRoute object
@@ -53,9 +57,42 @@ type ConsulServiceRouteReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := r.Log.WithValues("consulserviceroute", req.NamespacedName)
+	log := r.Log.WithValues("consulserviceroute", req.NamespacedName)
 
-	logger.Info("IT WORKS!")
+	log.Info("starting reconcile")
+
+	consulServiceRouteService := services.NewConsulServiceRouteService(r, r, log)
+	serviceRouterService := services.NewServiceRouterService(r, r, log)
+
+	consulServiceRoute, res, err := consulServiceRouteService.GetConsulServiceRouteFromReq(ctx, req)
+	if err != nil || res != nil {
+		return *res, err
+	}
+
+	serviceRouterName, ok := consulServiceRoute.Labels[controllerlabels.ServiceRouter]
+	if !ok || len(serviceRouterName) == 0 {
+		return ctrl.Result{}, errors.NewBadRequest(fmt.Sprintf("%s annotation is required", controllerlabels.ServiceRouter))
+	}
+
+	namespace := req.Namespace
+	consulServiceRoutes, err := consulServiceRouteService.GetServiceRoutesForServiceRouter(ctx, serviceRouterName, namespace)
+	if err != nil {
+		log.Error(err, "failed to get consul service routes")
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	res, err = serviceRouterService.WriteServiceRouter(ctx, serviceRouterName, namespace, consulServiceRoutes)
+	if err != nil || res != nil {
+		return *res, err
+	}
+
+	err = consulServiceRouteService.UpdateFinalizer(ctx, consulServiceRoute)
+	if err != nil {
+		log.Error(err, "failed to update the finalizer for the consul service route")
+
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }

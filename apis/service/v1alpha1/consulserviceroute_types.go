@@ -29,8 +29,7 @@ type ConsulServiceRouteSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	ServiceRouter string                 `json:"serviceRouter"`
-	Route         consulk8s.ServiceRoute `json:"route"`
+	Route consulk8s.ServiceRoute `json:"route"`
 }
 
 // ConsulServiceRouteStatus defines the observed state of ConsulServiceRoute

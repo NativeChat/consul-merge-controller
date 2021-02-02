@@ -177,11 +177,8 @@ spec:
                         type: object
                     type: object
                 type: object
-              serviceRouter:
-                type: string
             required:
             - route
-            - serviceRouter
             type: object
           status:
             description: ConsulServiceRouteStatus defines the observed state of ConsulServiceRoute

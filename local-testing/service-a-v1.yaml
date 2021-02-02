@@ -1,0 +1,13 @@
+apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+kind: ConsulServiceRoute
+metadata:
+  name: service-a-v1
+  labels:
+    service.consul.k8s.nativechat.com/service-router: service-a
+spec:
+  route:
+    match:
+      http:
+        pathPrefix: /v1
+    destination:
+      service: service-a-v1
