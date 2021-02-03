@@ -15,6 +15,7 @@ RUN make go-mod-vendor-hack GO_MOD_DEPS_DIR=/go/pkg/mod CONSUL_K8S_VERSION=@v0.2
 COPY main.go main.go
 COPY apis/ apis/
 COPY controllers/ controllers/
+COPY pkg/ pkg/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go

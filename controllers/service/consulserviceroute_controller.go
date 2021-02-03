@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
@@ -49,10 +50,6 @@ type ConsulServiceRouteReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ConsulServiceRoute object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
@@ -90,6 +87,15 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 	err = consulServiceRouteService.UpdateFinalizer(ctx, consulServiceRoute)
 	if err != nil {
 		log.Error(err, "failed to update the finalizer for the consul service route")
+
+		return ctrl.Result{}, err
+	}
+
+	consulServiceRoute.Status.UpdatedAt = time.Now().String()
+
+	err = r.Status().Update(ctx, consulServiceRoute)
+	if err != nil {
+		log.Error(err, "failed to update the status of the consul service route")
 
 		return ctrl.Result{}, err
 	}
