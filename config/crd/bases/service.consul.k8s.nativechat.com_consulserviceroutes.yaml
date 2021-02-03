@@ -182,6 +182,9 @@ spec:
             type: object
           status:
             description: ConsulServiceRouteStatus defines the observed state of ConsulServiceRoute
+            properties:
+              updatedAt:
+                type: string
             type: object
         type: object
     served: true

@@ -14,12 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package service
+package service_test
 
 import (
+	"io/ioutil"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/NativeChat/consul-merge-controller/testutils"
+	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -57,10 +61,18 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 	}
 
+	// Start the test env.
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	// Generate and save the test kubeconfig.
+	err = testutils.CreateAndSetTestKubeconfig(cfg.Host)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Setup the scheme.
+	err = consulk8s.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 	err = servicev1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -70,10 +82,19 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	// Start test consul env.
+	err = testutils.StartConsulLocalEnv()
+	Expect(err).NotTo(HaveOccurred())
+
+	testutils.StartConsulServiceRouteController(k8sClient)
 }, 60)
 
 var _ = AfterSuite(func() {
+	ioutil.WriteFile("/tmp/suite", []byte("after suite "+time.Now().String()), 0644)
 	By("tearing down the test environment")
 	err := testEnv.Stop()
+	Expect(err).NotTo(HaveOccurred())
+
+	err = testutils.StopConsulLocalEnv()
 	Expect(err).NotTo(HaveOccurred())
 })

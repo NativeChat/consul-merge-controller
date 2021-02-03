@@ -30,7 +30,9 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+		bash scripts/download-consul-bins.sh $(ENVTEST_ASSETS_DIR); \
+		ENVTEST_ASSETS_DIR=$(ENVTEST_ASSETS_DIR) MAKEFILE_PATH=$(PWD)/Makefile go test ./... -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet
@@ -133,3 +135,16 @@ go-mod-vendor-hack:
 	sed $(SED_FLAGS) -e 's-"k8s.io/api/admission/v1beta1"--' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
 	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Create-req.Operation == "CREATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
 	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Update-req.Operation == "UPDATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
+
+TEST_CONSUL_K8S_PATH ?= https://raw.githubusercontent.com/hashicorp/consul-k8s/v0.23.0/config/crd/bases/consul.hashicorp.com_
+.PHONY: setup-consul-test-env
+setup-consul-test-env:
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)ingressgateways.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)proxydefaults.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)servicedefaults.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)serviceintentions.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)serviceresolvers.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)servicerouters.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)servicesplitters.yaml
+	kubectl apply -f $(TEST_CONSUL_K8S_PATH)terminatinggateways.yaml
+

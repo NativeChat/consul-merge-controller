@@ -10,6 +10,20 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go"
+        },
+        {
+            "name": "Debug controllers/service tests",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "env": {
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin",
+                "ENVTEST_ASSETS_DIR": "${workspaceFolder}/testbin",
+                "MAKEFILE_PATH": "${workspaceFolder}/Makefile",
+                "SHOW_CONSUL_LOGS": "false",
+                "KUBEBUILDER_ATTACH_CONTROL_PLANE_OUTPUT": "false"
+            },
+            "program": "${workspaceFolder}/controllers/service"
         }
     ]
 }
