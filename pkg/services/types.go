@@ -28,6 +28,10 @@ type ConsulServiceRouteService interface {
 	GetConsulServiceRouteFromReq(ctx context.Context, req ctrl.Request) (*servicev1alpha1.ConsulServiceRoute, *ctrl.Result, error)
 	GetServiceRoutesForServiceRouter(ctx context.Context, serviceRouterName, namespace string) ([]servicev1alpha1.ConsulServiceRoute, error)
 	UpdateFinalizer(ctx context.Context, serviceRoute *servicev1alpha1.ConsulServiceRoute) error
+	IsDeleted(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
+	IsNew(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
+	IsChanged(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
+	GetContentSHA(serviceRoute servicev1alpha1.ConsulServiceRoute) string
 }
 
 // ServiceRouterService provides methods for working with service routers.

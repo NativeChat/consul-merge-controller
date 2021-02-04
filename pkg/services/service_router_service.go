@@ -71,10 +71,12 @@ func (s *serviceRouterService) WriteServiceRouter(ctx context.Context, serviceRo
 		s.log.Info("no routes left for service router, it will be deleted")
 
 		err = s.writer.Delete(ctx, actualConsulServiceRouter)
-
 		if err != nil {
+			s.log.Error(err, "failed to delete service router")
 			return &ctrl.Result{}, err
 		}
+
+		s.log.Info("successfully deleted service router")
 
 		return nil, nil
 	}

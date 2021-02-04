@@ -37,7 +37,8 @@ type ConsulServiceRouteStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	UpdatedAt string `json:"updatedAt,omitempty"`
+	UpdatedAt  string `json:"updatedAt,omitempty"`
+	ContentSHA string `json:"contentSha,omitempty"`
 }
 
 // +kubebuilder:object:root=true

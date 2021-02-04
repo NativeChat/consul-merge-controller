@@ -66,6 +66,17 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return *res, err
 	}
 
+	reconcileAction := "triggered by dependency change"
+	if consulServiceRouteService.IsNew(*consulServiceRoute) {
+		reconcileAction = "create"
+	} else if consulServiceRouteService.IsChanged(*consulServiceRoute) {
+		reconcileAction = "change"
+	} else if consulServiceRouteService.IsDeleted(*consulServiceRoute) {
+		reconcileAction = "delete"
+	}
+
+	log.Info(fmt.Sprintf("reconcile action is: %s", reconcileAction))
+
 	serviceRouterName, ok := consulServiceRoute.Labels[controllerlabels.ServiceRouter]
 	if !ok || len(serviceRouterName) == 0 {
 		return ctrl.Result{}, errors.NewBadRequest(fmt.Sprintf("%s annotation is required", controllerlabels.ServiceRouter))
@@ -88,16 +99,22 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		log.Error(err, "failed to update the finalizer for the consul service route")
 
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
-	consulServiceRoute.Status.UpdatedAt = time.Now().String()
+	if !consulServiceRouteService.IsDeleted(*consulServiceRoute) && consulServiceRouteService.IsChanged(*consulServiceRoute) {
+		consulServiceRoute.Status.UpdatedAt = time.Now().String()
+		consulServiceRoute.Status.ContentSHA = consulServiceRouteService.GetContentSHA(*consulServiceRoute)
 
-	err = r.Status().Update(ctx, consulServiceRoute)
-	if err != nil {
-		log.Error(err, "failed to update the status of the consul service route")
+		log.Info("updating the status of the consul service route")
+		err = r.Status().Update(ctx, consulServiceRoute)
+		if err != nil {
+			log.Error(err, "failed to update the status of the consul service route")
 
-		return ctrl.Result{}, err
+			return ctrl.Result{Requeue: true}, err
+		}
+
+		log.Info("successfully updated the status of the consul service route")
 	}
 
 	return ctrl.Result{}, nil

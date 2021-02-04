@@ -18,6 +18,9 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
 	"github.com/NativeChat/consul-merge-controller/pkg/finalizers"
@@ -75,7 +78,7 @@ func (c *consulServiceRouteService) GetServiceRoutesForServiceRouter(ctx context
 
 	notMarkedForDeletion := []servicev1alpha1.ConsulServiceRoute{}
 	for _, item := range consulServiceRoutes.Items {
-		if !c.isDeleted(item) {
+		if !c.IsDeleted(item) {
 			notMarkedForDeletion = append(notMarkedForDeletion, item)
 		}
 	}
@@ -84,21 +87,59 @@ func (c *consulServiceRouteService) GetServiceRoutesForServiceRouter(ctx context
 }
 
 func (c *consulServiceRouteService) UpdateFinalizer(ctx context.Context, serviceRoute *servicev1alpha1.ConsulServiceRoute) error {
-	if c.isDeleted(*serviceRoute) {
-		controllerutil.RemoveFinalizer(serviceRoute, finalizers.ConsulServiceRouteFinalizerName)
-	} else {
-		controllerutil.AddFinalizer(serviceRoute, finalizers.ConsulServiceRouteFinalizerName)
-	}
+	var err error = nil
+	containsFinalizer := controllerutil.ContainsFinalizer(serviceRoute, finalizers.ConsulServiceRouteFinalizerName)
 
-	err := c.writer.Update(ctx, serviceRoute)
+	if c.IsDeleted(*serviceRoute) {
+		if containsFinalizer {
+			c.log.Info("removing finalizer")
+			controllerutil.RemoveFinalizer(serviceRoute, finalizers.ConsulServiceRouteFinalizerName)
+
+			err = c.writer.Update(ctx, serviceRoute)
+			if err == nil {
+				c.log.Info("finalizer removed")
+			}
+		}
+	} else if !containsFinalizer {
+		c.log.Info("adding finalizer")
+		controllerutil.AddFinalizer(serviceRoute, finalizers.ConsulServiceRouteFinalizerName)
+
+		err = c.writer.Update(ctx, serviceRoute)
+		if err == nil {
+			c.log.Info("finalizer added")
+		}
+	}
 
 	return err
 }
 
-func (c *consulServiceRouteService) isDeleted(serviceRoute servicev1alpha1.ConsulServiceRoute) bool {
+func (c *consulServiceRouteService) IsDeleted(serviceRoute servicev1alpha1.ConsulServiceRoute) bool {
 	isDeleted := serviceRoute.GetDeletionTimestamp() != nil
 
 	return isDeleted
+}
+
+func (c *consulServiceRouteService) IsNew(serviceRoute servicev1alpha1.ConsulServiceRoute) bool {
+	isNew := serviceRoute.Status.ContentSHA == ""
+
+	return isNew
+}
+
+func (c *consulServiceRouteService) IsChanged(serviceRoute servicev1alpha1.ConsulServiceRoute) bool {
+	isChanged := serviceRoute.Status.ContentSHA != c.GetContentSHA(serviceRoute)
+
+	return isChanged
+}
+
+func (c *consulServiceRouteService) GetContentSHA(serviceRoute servicev1alpha1.ConsulServiceRoute) string {
+	serialized, _ := json.Marshal(serviceRoute.Spec)
+
+	h := sha256.New()
+
+	h.Write(serialized)
+	result := fmt.Sprintf("%x", h.Sum(nil))
+
+	return result
 }
 
 // NewConsulServiceRouteService returns new consul service route service implementation.
