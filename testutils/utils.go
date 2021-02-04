@@ -2,12 +2,14 @@ package testutils
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"time"
 
 	"github.com/onsi/gomega"
@@ -206,8 +208,11 @@ func CreateConsulServiceRoute(ctx context.Context, k8sClient client.Client, serv
 	}
 
 	err = k8sClient.Create(ctx, csr)
+	if err != nil {
+		return err
+	}
 
-	time.Sleep(300 * time.Millisecond)
+	err = waitForConsulServiceRouteToBeUpToDate(ctx, k8sClient, csr)
 
 	return err
 }
@@ -246,6 +251,17 @@ func DeleteConsulServiceRoute(ctx context.Context, k8sClient client.Client, name
 	return err
 }
 
+func UpdateConsulServiceRoute(ctx context.Context, k8sClient client.Client, updated *v1alpha1.ConsulServiceRoute) error {
+	err := k8sClient.Update(ctx, updated)
+	if err != nil {
+		return err
+	}
+
+	err = waitForConsulServiceRouteToBeUpToDate(ctx, k8sClient, updated)
+
+	return err
+}
+
 func ExpectConsulServiceRoute(ctx context.Context, k8sClient client.Client, name string, expected consulk8s.ServiceRoute) {
 	csr, err := GetConsulServiceRoute(ctx, k8sClient, name)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -254,6 +270,7 @@ func ExpectConsulServiceRoute(ctx context.Context, k8sClient client.Client, name
 	gomega.Expect(csr.Finalizers).To(gomega.ContainElement(ServiceFinalizer))
 
 	gomega.Expect(csr.Status.UpdatedAt).NotTo(gomega.BeEmpty())
+	gomega.Expect(csr.Status.ContentSHA).To(gomega.Equal(getConsulServiceRouteContentSHA(csr)))
 
 	gomega.Expect(csr.Spec.Route).To(gomega.Equal(expected))
 }
@@ -267,19 +284,46 @@ func CreateHTTPPathPrefixRoute(service, pathPrefix string) consulk8s.ServiceRout
 	return result
 }
 
-func deleteK8sObject(ctx context.Context, k8sClient client.Client, name string, obj client.Object) error {
-	exists, err := getK8sObject(ctx, k8sClient, name, obj)
-	if err != nil {
-		return err
+func CreateConsulServiceRoutes(ctx context.Context, k8sClient client.Client, serviceRouterName string, routes []consulk8s.ServiceRoute) {
+	for _, serviceRoute := range routes {
+		err := CreateConsulServiceRoute(ctx, k8sClient, serviceRouterName, serviceRoute)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 
-	if !exists {
-		return nil
+	err := WaitForServiceRouterToBeCreated(ctx, k8sClient, serviceRouterName)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+func DeleteConsulServiceRoutes(ctx context.Context, k8sClient client.Client, serviceRouterName string, routes []consulk8s.ServiceRoute) {
+	for _, serviceRoute := range routes {
+		err := DeleteConsulServiceRoute(ctx, k8sClient, serviceRoute.Destination.Service)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 
-	err = k8sClient.Delete(ctx, obj.(client.Object))
+	serviceRouter, err := GetServiceRouter(ctx, k8sClient, serviceRouterName)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	return err
+	if serviceRouter == nil {
+		return
+	}
+
+	err = deleteK8sObject(ctx, k8sClient, serviceRouterName, serviceRouter)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+func WaitForServiceRouterToBeCreated(ctx context.Context, k8sClient client.Client, name string) error {
+	serviceRouter := new(consulk8s.ServiceRouter)
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(50 * time.Millisecond)
+
+		exists, _ := getK8sObject(ctx, k8sClient, name, serviceRouter)
+		if exists {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("ServiceRouter creation timeout exceeded")
 }
 
 func getK8sObject(ctx context.Context, k8sClient client.Client, name string, obj client.Object) (exists bool, err error) {
@@ -294,4 +338,64 @@ func getK8sObject(ctx context.Context, k8sClient client.Client, name string, obj
 	}
 
 	return true, nil
+}
+
+func deleteK8sObject(ctx context.Context, k8sClient client.Client, name string, obj client.Object) error {
+	exists, err := getK8sObject(ctx, k8sClient, name, obj)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	clientObject := obj.(client.Object)
+	err = k8sClient.Delete(ctx, clientObject)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(100 * time.Millisecond)
+
+		exists, err = getK8sObject(ctx, k8sClient, name, obj)
+		if !exists && err == nil {
+			return nil
+		}
+	}
+
+	errArgs := []interface{}{
+		reflect.TypeOf(clientObject).String(),
+		clientObject.GetNamespace(),
+		clientObject.GetName(),
+		clientObject.GetFinalizers(),
+	}
+	return fmt.Errorf("delete timeout for [%s] %s/%s exceeded, finalizers are %s", errArgs...)
+}
+
+func getConsulServiceRouteContentSHA(serviceRoute *v1alpha1.ConsulServiceRoute) string {
+	serialized, _ := json.Marshal(serviceRoute.Spec)
+
+	h := sha256.New()
+
+	h.Write(serialized)
+	result := fmt.Sprintf("%x", h.Sum(nil))
+
+	return result
+}
+
+func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client.Client, expected *v1alpha1.ConsulServiceRoute) error {
+	expectedSHA := getConsulServiceRouteContentSHA(expected)
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(50 * time.Millisecond)
+
+		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
+		if existing.Status.ContentSHA == expectedSHA {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("ConsulServiceRoute sync timeout exceeded")
 }

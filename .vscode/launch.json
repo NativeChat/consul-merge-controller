@@ -12,7 +12,7 @@
             "program": "main.go"
         },
         {
-            "name": "Debug controllers/service tests",
+            "name": "Debug tests controllers/service",
             "type": "go",
             "request": "launch",
             "mode": "test",
