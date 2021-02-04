@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION ?= v0.1.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
