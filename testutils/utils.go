@@ -169,27 +169,25 @@ func CreateServiceDefaults(ctx context.Context, k8sClient client.Client, service
 	}
 
 	err := k8sClient.Create(ctx, sd)
-
-	time.Sleep(100 * time.Millisecond)
-
-	return err
-}
-
-func CreateConsulServiceRoute(ctx context.Context, k8sClient client.Client, serviceRouter string, route consulk8s.ServiceRoute) error {
-	name := route.Destination.Service
-
-	serviceDefaults := new(consulk8s.ServiceDefaults)
-	exists, err := getK8sObject(ctx, k8sClient, name, serviceDefaults)
 	if err != nil {
 		return err
 	}
 
-	if !exists {
-		err = CreateServiceDefaults(ctx, k8sClient, name)
-		if err != nil {
-			return err
+	for i := 0; i < 10; i++ {
+		time.Sleep(100 * time.Millisecond)
+
+		sd := new(consulk8s.ServiceDefaults)
+		_, err = getK8sObject(ctx, k8sClient, service, sd)
+		if len(sd.Status.Conditions) > 0 && sd.Status.Conditions[0].Status == "True" {
+			return nil
 		}
 	}
+
+	return fmt.Errorf("create service defaults timeout exceeded")
+}
+
+func CreateConsulServiceRoute(ctx context.Context, k8sClient client.Client, serviceRouter string, route consulk8s.ServiceRoute) error {
+	name := route.Destination.Service
 
 	csr := &v1alpha1.ConsulServiceRoute{
 		TypeMeta: v1.TypeMeta{
@@ -207,7 +205,7 @@ func CreateConsulServiceRoute(ctx context.Context, k8sClient client.Client, serv
 		},
 	}
 
-	err = k8sClient.Create(ctx, csr)
+	err := k8sClient.Create(ctx, csr)
 	if err != nil {
 		return err
 	}
@@ -315,7 +313,7 @@ func WaitForServiceRouterToBeCreated(ctx context.Context, k8sClient client.Clien
 	serviceRouter := new(consulk8s.ServiceRouter)
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		exists, _ := getK8sObject(ctx, k8sClient, name, serviceRouter)
 		if exists {
@@ -389,7 +387,7 @@ func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client
 	expectedSHA := getConsulServiceRouteContentSHA(expected)
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
 		if existing.Status.ContentSHA == expectedSHA {

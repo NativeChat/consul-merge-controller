@@ -36,6 +36,10 @@ var serviceB = "service-b"
 var serviceBV1 = fmt.Sprintf("%s-v1", serviceB)
 var serviceBV2 = fmt.Sprintf("%s-v2", serviceB)
 
+var serviceDefaults = []string{
+	serviceA, serviceB, serviceAV1, serviceAV2, serviceAV3, serviceBV1, serviceBV2,
+}
+
 var _ = Describe("Service", func() {
 	Describe("ConsulServiceRoute controller", func() {
 		var ctx context.Context
@@ -43,21 +47,20 @@ var _ = Describe("Service", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 
-			err := testutils.CreateServiceDefaults(ctx, k8sClient, serviceA)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = testutils.CreateServiceDefaults(ctx, k8sClient, serviceB)
-			Expect(err).NotTo(HaveOccurred())
+			for _, serviceDefaultsName := range serviceDefaults {
+				err := testutils.CreateServiceDefaults(ctx, k8sClient, serviceDefaultsName)
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 
 		AfterEach(func() {
-			for _, serviceName := range []string{serviceA, serviceB} {
-				err := testutils.DeleteServiceDefaults(ctx, k8sClient, serviceName)
+			for _, csrName := range []string{serviceAV1, serviceAV2, serviceAV3, serviceBV1, serviceBV2} {
+				err := testutils.DeleteConsulServiceRoute(ctx, k8sClient, csrName)
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			for _, csrName := range []string{serviceAV1, serviceAV2, serviceAV3, serviceBV1, serviceBV2} {
-				err := testutils.DeleteConsulServiceRoute(ctx, k8sClient, csrName)
+			for _, serviceDefaultsName := range serviceDefaults {
+				err := testutils.DeleteServiceDefaults(ctx, k8sClient, serviceDefaultsName)
 				Expect(err).NotTo(HaveOccurred())
 			}
 		})
@@ -228,7 +231,7 @@ var _ = Describe("Service", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(time.Second)
 
 			serviceAServiceRouter, err = testutils.GetServiceRouter(ctx, k8sClient, serviceA)
 			Expect(err).NotTo(HaveOccurred())
