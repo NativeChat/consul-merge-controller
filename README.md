@@ -18,6 +18,7 @@ Kubernetes controller which merges Consul CRD resources.
             pathPrefix: /v1
         destination:
           service: service-a-v1
+
     ---
     apiVersion: service.consul.k8s.nativechat.com/v1alpha1
     kind: ConsulServiceRoute
@@ -31,6 +32,7 @@ Kubernetes controller which merges Consul CRD resources.
             pathPrefix: /pr1
         destination:
           service: service-a-pr1
+
     ---
     apiVersion: service.consul.k8s.nativechat.com/v1alpha1
     kind: ConsulServiceRoute
@@ -73,3 +75,29 @@ Kubernetes controller which merges Consul CRD resources.
           destination:
             service: service-a
     ```
+
+## Local development
+1. Install the Golang dependencies
+    ```bash
+    go mod vendor
+    ```
+2. Fix the dependency versioning issue with `consul-k8s`. This step will be removed when `consul-k8s` starts using the new `controller-runtime`.
+    ```bash
+    make go-mod-vendor-hack
+    ```
+3. Run the controller
+    ```bash
+    make run
+    ```
+
+## Release
+1. Change the `VERSION` variable in the `Makefile`.
+2. Build the docker image
+    ```bash
+    make docker-build
+    ```
+3. Push the docker image
+    ```bash
+    make docker-push
+    ```
+4. Create release in GitHub
