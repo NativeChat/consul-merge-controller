@@ -1,6 +1,24 @@
 # consul-merge-controller
 Kubernetes controller which merges Consul CRD resources.
 
+<br />
+
+<p align="left">
+  <img src="https://github.com/NativeChat/consul-merge-controller/workflows/Build/badge.svg" alt="Build"/>
+  <img src="https://github.com/NativeChat/consul-merge-controller/workflows/Test/badge.svg" alt="Test"/>
+
+  <a href="https://github.com/NativeChat/consul-merge-controller/issues">
+      <img src="https://img.shields.io/github/issues-raw/NativeChat/consul-merge-controller?style=flat" alt="github issues"/>
+  </a>
+  <a href="https://hub.docker.com/r/nchatsystem/consul-merge-controller/">
+    <img src="https://img.shields.io/docker/pulls/nchatsystem/consul-merge-controller" alt="docker pulls"/>
+  </a>
+</p>
+
+<hr />
+
+<br />
+
 ## The controller provides the following merge functionality:
 1. kind: `ServiceRouter` (apiVersion: `consul.hashicorp.com/v1alpha1`) using the `ConsulServiceRoute` CRD provided by this controller.
 
