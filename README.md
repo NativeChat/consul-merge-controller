@@ -28,8 +28,9 @@ Kubernetes controller which merges Consul CRD resources.
     kind: ConsulServiceRoute
     metadata:
       name: service-a-v1
+      labels:
+        service.consul.k8s.nativechat.com/service-router: service-a
     spec:
-      serviceRouter: service-a
       route:
         match:
           http:
@@ -42,6 +43,8 @@ Kubernetes controller which merges Consul CRD resources.
     kind: ConsulServiceRoute
     metadata:
       name: service-a-pr1
+      labels:
+        service.consul.k8s.nativechat.com/service-router: service-a
     spec:
       serviceRouter: service-a
       route:
@@ -56,6 +59,8 @@ Kubernetes controller which merges Consul CRD resources.
     kind: ConsulServiceRoute
     metadata:
       name: service-a-pr2
+      labels:
+        service.consul.k8s.nativechat.com/service-router: service-a
     spec:
       serviceRouter: service-a
       route:
@@ -79,19 +84,19 @@ Kubernetes controller which merges Consul CRD resources.
             http:
               pathPrefix: /v1
           destination:
-            service: service-a
+            service: service-a-v1
         - match:
             http:
               pathPrefix: /pr1
           destination:
-            service: service-a
+            service: service-a-pr1
         - match:
             http:
               header:
                 - name: x-api-version
                   exact: pr2
           destination:
-            service: service-a
+            service: service-a-pr2
     ```
 
 ## Local development
