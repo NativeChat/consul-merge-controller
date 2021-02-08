@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
+	e "github.com/NativeChat/consul-merge-controller/pkg/errors"
 	"github.com/NativeChat/consul-merge-controller/pkg/finalizers"
 	controllerlabels "github.com/NativeChat/consul-merge-controller/pkg/labels"
 	"github.com/go-logr/logr"
@@ -65,8 +66,9 @@ func (c *consulServiceRouteService) GetServiceRoutesForServiceRouter(ctx context
 
 	requirement, err := labels.NewRequirement(controllerlabels.ServiceRouter, selection.Equals, []string{serviceRouterName})
 	if err != nil {
-		panic(err)
+		return nil, e.NewReconcileError(err, false)
 	}
+
 	err = c.reader.List(ctx, consulServiceRoutes, &client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: labels.Everything().Add(*requirement),

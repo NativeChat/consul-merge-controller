@@ -103,7 +103,7 @@ func StartConsulLocalEnv() error {
 
 	if consulK8sCmd == nil {
 		logf.Log.Info("creating consul CRDs in the current k8s cluster")
-		err := exec.Command("make", "setup-consul-test-env", "-f", os.Getenv("MAKEFILE_PATH")).Run()
+		err := exec.Command("make", "setup-local-consul-test-env", "-f", os.Getenv("MAKEFILE_PATH")).Run()
 		if err != nil {
 			return err
 		}
@@ -153,11 +153,8 @@ func StopConsulLocalEnv() error {
 	return nil
 }
 
-func CreateServiceDefaults(ctx context.Context, k8sClient client.Client, service string, protocol ...string) error {
+func CreateServiceDefaults(ctx context.Context, k8sClient client.Client, service string) error {
 	serviceProtocol := "http"
-	if len(protocol) != 0 {
-		serviceProtocol = protocol[0]
-	}
 
 	sd := &consulk8s.ServiceDefaults{
 		TypeMeta: v1.TypeMeta{
@@ -173,17 +170,21 @@ func CreateServiceDefaults(ctx context.Context, k8sClient client.Client, service
 		return err
 	}
 
-	for i := 0; i < 10; i++ {
-		time.Sleep(100 * time.Millisecond)
-
+	hasTimedOut := retryWithSleep(func() bool {
 		sd := new(consulk8s.ServiceDefaults)
 		_, err = getK8sObject(ctx, k8sClient, service, sd)
 		if len(sd.Status.Conditions) > 0 && sd.Status.Conditions[0].Status == "True" {
-			return nil
+			return true
 		}
+
+		return false
+	})
+
+	if hasTimedOut {
+		return fmt.Errorf("create service defaults timeout exceeded")
 	}
 
-	return fmt.Errorf("create service defaults timeout exceeded")
+	return nil
 }
 
 func CreateConsulServiceRoute(ctx context.Context, k8sClient client.Client, serviceRouter string, route consulk8s.ServiceRoute) error {
@@ -312,16 +313,20 @@ func DeleteConsulServiceRoutes(ctx context.Context, k8sClient client.Client, ser
 func WaitForServiceRouterToBeCreated(ctx context.Context, k8sClient client.Client, name string) error {
 	serviceRouter := new(consulk8s.ServiceRouter)
 
-	for i := 0; i < 10; i++ {
-		time.Sleep(100 * time.Millisecond)
-
+	hasTimedOut := retryWithSleep(func() bool {
 		exists, _ := getK8sObject(ctx, k8sClient, name, serviceRouter)
 		if exists {
-			return nil
+			return true
 		}
+
+		return false
+	})
+
+	if hasTimedOut {
+		return fmt.Errorf("ServiceRouter creation timeout exceeded")
 	}
 
-	return fmt.Errorf("ServiceRouter creation timeout exceeded")
+	return nil
 }
 
 func getK8sObject(ctx context.Context, k8sClient client.Client, name string, obj client.Object) (exists bool, err error) {
@@ -354,22 +359,27 @@ func deleteK8sObject(ctx context.Context, k8sClient client.Client, name string, 
 		return err
 	}
 
-	for i := 0; i < 10; i++ {
-		time.Sleep(100 * time.Millisecond)
-
+	hasTimedOut := retryWithSleep(func() bool {
 		exists, err = getK8sObject(ctx, k8sClient, name, obj)
 		if !exists && err == nil {
-			return nil
+			return true
 		}
+
+		return false
+	})
+
+	if hasTimedOut {
+		errArgs := []interface{}{
+			reflect.TypeOf(clientObject).String(),
+			clientObject.GetNamespace(),
+			clientObject.GetName(),
+			clientObject.GetFinalizers(),
+		}
+
+		return fmt.Errorf("delete timeout for [%s] %s/%s exceeded, finalizers are %s", errArgs...)
 	}
 
-	errArgs := []interface{}{
-		reflect.TypeOf(clientObject).String(),
-		clientObject.GetNamespace(),
-		clientObject.GetName(),
-		clientObject.GetFinalizers(),
-	}
-	return fmt.Errorf("delete timeout for [%s] %s/%s exceeded, finalizers are %s", errArgs...)
+	return nil
 }
 
 func getConsulServiceRouteContentSHA(serviceRoute *v1alpha1.ConsulServiceRoute) string {
@@ -386,14 +396,31 @@ func getConsulServiceRouteContentSHA(serviceRoute *v1alpha1.ConsulServiceRoute) 
 func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client.Client, expected *v1alpha1.ConsulServiceRoute) error {
 	expectedSHA := getConsulServiceRouteContentSHA(expected)
 
+	hasTimedOut := retryWithSleep(func() bool {
+		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
+		if existing.Status.ContentSHA == expectedSHA {
+			return true
+		}
+
+		return false
+	})
+
+	if hasTimedOut {
+		return fmt.Errorf("ConsulServiceRoute sync timeout exceeded")
+	}
+
+	return nil
+}
+
+func retryWithSleep(action func() bool) bool {
 	for i := 0; i < 10; i++ {
 		time.Sleep(100 * time.Millisecond)
 
-		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
-		if existing.Status.ContentSHA == expectedSHA {
-			return nil
+		shouldStop := action()
+		if shouldStop {
+			return false
 		}
 	}
 
-	return fmt.Errorf("ConsulServiceRoute sync timeout exceeded")
+	return true
 }

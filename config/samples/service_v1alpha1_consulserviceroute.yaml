@@ -2,6 +2,12 @@ apiVersion: service.consul.k8s.nativechat.com/v1alpha1
 kind: ConsulServiceRoute
 metadata:
   name: consulserviceroute-sample
+  labels:
+    service.consul.k8s.nativechat.com/service-router: consulserviceroute
 spec:
-  # Add fields here
-  foo: bar
+  route:
+    match:
+      http:
+        pathPrefix: /v1
+    destination:
+      service: consulserviceroute-sample
