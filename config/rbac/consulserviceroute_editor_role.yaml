@@ -1,0 +1,24 @@
+# permissions for end users to edit consulserviceroutes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulserviceroute-editor-role
+rules:
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceroutes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceroutes/status
+  verbs:
+  - get

@@ -1,0 +1,20 @@
+# permissions for end users to view consulserviceroutes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulserviceroute-viewer-role
+rules:
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceroutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceroutes/status
+  verbs:
+  - get
