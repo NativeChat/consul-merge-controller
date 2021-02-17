@@ -46,7 +46,6 @@ Kubernetes controller which merges Consul CRD resources.
       labels:
         service.consul.k8s.nativechat.com/service-router: service-a
     spec:
-      serviceRouter: service-a
       route:
         match:
           http:
@@ -62,7 +61,6 @@ Kubernetes controller which merges Consul CRD resources.
       labels:
         service.consul.k8s.nativechat.com/service-router: service-a
     spec:
-      serviceRouter: service-a
       route:
         match:
           http:

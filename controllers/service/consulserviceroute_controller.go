@@ -83,7 +83,7 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	serviceRouterName, ok := consulServiceRoute.Labels[controllerlabels.ServiceRouter]
 	if !ok || len(serviceRouterName) == 0 {
-		return ctrl.Result{}, apierrors.NewBadRequest(fmt.Sprintf("%s annotation is required", controllerlabels.ServiceRouter))
+		return ctrl.Result{}, apierrors.NewBadRequest(fmt.Sprintf("%s label is required", controllerlabels.ServiceRouter))
 	}
 
 	namespace := req.Namespace
