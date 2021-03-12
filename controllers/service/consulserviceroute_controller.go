@@ -69,6 +69,7 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 		r.Client,
 		r.Client,
 		log,
+		nil,
 		"Routes",
 		"Route",
 		reflect.TypeOf(consulk8s.ServiceRouter{}),

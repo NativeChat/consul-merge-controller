@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,14 +29,16 @@ type ConsulServiceIntentionsSourceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ConsulServiceIntentionsSource. Edit ConsulServiceIntentionsSource_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Source *consulk8s.SourceIntention `json:"source"`
 }
 
 // ConsulServiceIntentionsSourceStatus defines the observed state of ConsulServiceIntentionsSource
 type ConsulServiceIntentionsSourceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	UpdatedAt  string `json:"updatedAt,omitempty"`
+	ContentSHA string `json:"contentSha,omitempty"`
 }
 
 // +kubebuilder:object:root=true
