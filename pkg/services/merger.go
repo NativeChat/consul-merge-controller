@@ -30,20 +30,20 @@ import (
 )
 
 type merger struct {
-	reader                client.Reader
-	writer                client.Writer
-	log                   logr.Logger
-	mergeIntoPropertyName string
-	mergeItemPropertyName string
-	mergeDestinationType  reflect.Type
+	reader                  client.Reader
+	writer                  client.Writer
+	log                     logr.Logger
+	patchExpectedDefinition func(obj client.Object) client.Object
+	mergeIntoPropertyName   string
+	mergeItemPropertyName   string
+	mergeDestinationType    reflect.Type
 }
 
 func (m *merger) Merge(ctx context.Context, destinationResourceName, namespace string, items []client.Object) (*ctrl.Result, error) {
 	expected := m.getExpectedDefinition(destinationResourceName, namespace, items)
 
 	actual := reflect.New(m.mergeDestinationType).Interface().(client.Object)
-	// TODO: change to var because currently it is an empty string.
-	destinationResourceKind := expected.GetObjectKind().GroupVersionKind().Kind
+	destinationResourceKind := expected.GetObjectKind().GroupVersionKind().GroupVersion().String()
 	err := m.reader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: destinationResourceName}, actual)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -136,6 +136,10 @@ func (m *merger) getExpectedDefinition(destinationResourceName, namespace string
 		expected.SetOwnerReferences(append(expected.GetOwnerReferences(), ownerReference))
 	}
 
+	if m.patchExpectedDefinition != nil {
+		expected = m.patchExpectedDefinition(expected)
+	}
+
 	return expected
 }
 
@@ -144,6 +148,7 @@ func NewMerger(
 	reader client.Reader,
 	writer client.Writer,
 	log logr.Logger,
+	patchExpectedDefinition func(obj client.Object) client.Object,
 	mergeIntoPropertyName string,
 	mergeItemPropertyName string,
 	mergeDestinationType reflect.Type,
@@ -155,6 +160,7 @@ func NewMerger(
 	m.mergeIntoPropertyName = mergeIntoPropertyName
 	m.mergeItemPropertyName = mergeItemPropertyName
 	m.mergeDestinationType = mergeDestinationType
+	m.patchExpectedDefinition = patchExpectedDefinition
 
 	return m
 }

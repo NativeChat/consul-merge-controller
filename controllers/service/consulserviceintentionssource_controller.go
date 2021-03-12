@@ -18,13 +18,20 @@ package service
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/go-logr/logr"
+	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
+	"github.com/NativeChat/consul-merge-controller/pkg/finalizers"
+	controllerlabels "github.com/NativeChat/consul-merge-controller/pkg/labels"
+	"github.com/NativeChat/consul-merge-controller/pkg/reconcile"
+	"github.com/NativeChat/consul-merge-controller/pkg/services"
 )
 
 // ConsulServiceIntentionsSourceReconciler reconciles a ConsulServiceIntentionsSource object
@@ -44,19 +51,45 @@ type ConsulServiceIntentionsSourceReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ConsulServiceIntentionsSource object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *ConsulServiceIntentionsSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("consulserviceintentionssource", req.NamespacedName)
+	log := r.Log.WithValues("consulserviceintentionssource", req.NamespacedName)
 
-	// your logic here
+	patchExpectedDefinition := func(obj client.Object) client.Object {
+		serviceIntentions := obj.(*consulk8s.ServiceIntentions)
 
-	return ctrl.Result{}, nil
+		serviceIntentions.Spec.Destination.Name = obj.GetName()
+
+		return serviceIntentions
+	}
+
+	crdService := services.NewCRDService(
+		r.Client,
+		r.Client,
+		log,
+		finalizers.ConsulServiceRouteFinalizerName,
+		reflect.TypeOf(v1alpha1.ConsulServiceIntentionsSource{}),
+		reflect.TypeOf(v1alpha1.ConsulServiceIntentionsSourceList{}),
+	)
+	merger := services.NewMerger(
+		r.Client,
+		r.Client,
+		log,
+		patchExpectedDefinition,
+		"Sources",
+		"Source",
+		reflect.TypeOf(consulk8s.ServiceIntentions{}),
+	)
+	reconciler := reconcile.NewReconciler(
+		r,
+		crdService,
+		merger,
+		log,
+		controllerlabels.ServiceIntentions,
+	)
+
+	res, err := reconciler.Reconcile(ctx, req)
+
+	return res, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
