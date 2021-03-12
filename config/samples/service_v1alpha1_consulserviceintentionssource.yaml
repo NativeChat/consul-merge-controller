@@ -1,0 +1,7 @@
+apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+kind: ConsulServiceIntentionsSource
+metadata:
+  name: consulserviceintentionssource-sample
+spec:
+  # Add fields here
+  foo: bar

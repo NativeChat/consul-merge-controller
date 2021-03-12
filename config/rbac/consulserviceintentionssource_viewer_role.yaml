@@ -1,0 +1,20 @@
+# permissions for end users to view consulserviceintentionssources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulserviceintentionssource-viewer-role
+rules:
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources/status
+  verbs:
+  - get

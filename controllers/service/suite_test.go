@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NativeChat/consul-merge-controller/testutils"
 	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/NativeChat/consul-merge-controller/testutils"
 
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -73,6 +74,9 @@ var _ = BeforeSuite(func() {
 	// Setup the scheme.
 	err = consulk8s.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
+	err = servicev1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = servicev1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
