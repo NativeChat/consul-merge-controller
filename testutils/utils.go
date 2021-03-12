@@ -34,7 +34,7 @@ var assetsDir = os.Getenv("ENVTEST_ASSETS_DIR")
 var testBinDir = path.Join(assetsDir, "bin")
 var kubeconfigPath = path.Join(assetsDir, "kubeconfig.json")
 
-func StartConsulServiceRouteController(k8sClient client.Client) {
+func StartControllers(k8sClient client.Client) {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), manager.Options{
 		Scheme:             k8sClient.Scheme(),
 		MetricsBindAddress: "0",
@@ -48,6 +48,15 @@ func StartConsulServiceRouteController(k8sClient client.Client) {
 	}
 
 	err = consulServiceRouterController.SetupWithManager(mgr)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	consulServiceIntentionsSource := &service.ConsulServiceIntentionsSourceReconciler{
+		Client: k8sClient,
+		Log:    ctrl.Log.WithName("controllers").WithName("service").WithName("ConsulServiceIntentionsSource"),
+		Scheme: mgr.GetScheme(),
+	}
+
+	err = consulServiceIntentionsSource.SetupWithManager(mgr)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	go func() {
@@ -226,6 +235,16 @@ func GetConsulServiceRoute(ctx context.Context, k8sClient client.Client, service
 	return csr, err
 }
 
+func GetConsulServiceIntentionsSource(ctx context.Context, k8sClient client.Client, name string) (*v1alpha1.ConsulServiceIntentionsSource, error) {
+	csis := new(v1alpha1.ConsulServiceIntentionsSource)
+	exists, err := getK8sObject(ctx, k8sClient, name, csis)
+	if !exists {
+		csis = nil
+	}
+
+	return csis, err
+}
+
 func GetServiceRouter(ctx context.Context, k8sClient client.Client, name string) (*consulk8s.ServiceRouter, error) {
 	sr := new(consulk8s.ServiceRouter)
 	exists, err := getK8sObject(ctx, k8sClient, name, sr)
@@ -269,9 +288,22 @@ func ExpectConsulServiceRoute(ctx context.Context, k8sClient client.Client, name
 	gomega.Expect(csr.Finalizers).To(gomega.ContainElement(ServiceFinalizer))
 
 	gomega.Expect(csr.Status.UpdatedAt).NotTo(gomega.BeEmpty())
-	gomega.Expect(csr.Status.ContentSHA).To(gomega.Equal(getConsulServiceRouteContentSHA(csr)))
+	gomega.Expect(csr.Status.ContentSHA).To(gomega.Equal(getResourceContentSHA(csr)))
 
 	gomega.Expect(csr.Spec.Route).To(gomega.Equal(expected))
+}
+
+func ExpectConsulServiceIntentionsSource(ctx context.Context, k8sClient client.Client, name string, expected consulk8s.SourceIntention) {
+	csis, err := GetConsulServiceIntentionsSource(ctx, k8sClient, name)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	gomega.Expect(csis).NotTo(gomega.BeNil())
+	gomega.Expect(csis.Finalizers).To(gomega.ContainElement(ServiceFinalizer))
+
+	gomega.Expect(csis.Status.UpdatedAt).NotTo(gomega.BeEmpty())
+	gomega.Expect(csis.Status.ContentSHA).To(gomega.Equal(getResourceContentSHA(csis)))
+
+	gomega.Expect(csis.Spec.Source).To(gomega.Equal(&expected))
 }
 
 func CreateHTTPPathPrefixRoute(service, pathPrefix string) consulk8s.ServiceRoute {
@@ -329,6 +361,45 @@ func WaitForServiceRouterToBeCreated(ctx context.Context, k8sClient client.Clien
 	return nil
 }
 
+func CreateConsulServiceIntentionsSource(ctx context.Context, k8sClient client.Client, serviceName string, source consulk8s.SourceIntention) (string, error) {
+	name := fmt.Sprintf("%s-%s-to-%s", source.Action, source.Name, serviceName)
+
+	csis := &v1alpha1.ConsulServiceIntentionsSource{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.Version,
+			Kind:       "ConsulServiceIntentionsSource",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      name,
+			Namespace: DefaultK8sNamespace,
+
+			Labels: map[string]string{ServiceIntentins: serviceName},
+		},
+		Spec: v1alpha1.ConsulServiceIntentionsSourceSpec{
+			Source: &source,
+		},
+	}
+
+	err := k8sClient.Create(ctx, csis)
+	if err != nil {
+		return "", err
+	}
+
+	err = waitForConsulServiceIntentionsSourceToBeUpToDate(ctx, k8sClient, csis)
+	if err != nil {
+		return "", err
+	}
+
+	return name, nil
+}
+
+func DeleteConsulServiceIntentionsSource(ctx context.Context, k8sClient client.Client, name string) error {
+	csr := new(v1alpha1.ConsulServiceIntentionsSource)
+	err := deleteK8sObject(ctx, k8sClient, name, csr)
+
+	return err
+}
+
 func getK8sObject(ctx context.Context, k8sClient client.Client, name string, obj client.Object) (exists bool, err error) {
 	err = k8sClient.Get(ctx, client.ObjectKey{Name: name, Namespace: DefaultK8sNamespace}, obj)
 	if err != nil {
@@ -382,8 +453,8 @@ func deleteK8sObject(ctx context.Context, k8sClient client.Client, name string, 
 	return nil
 }
 
-func getConsulServiceRouteContentSHA(serviceRoute *v1alpha1.ConsulServiceRoute) string {
-	serialized, _ := json.Marshal(serviceRoute.Spec)
+func getResourceContentSHA(resource interface{}) string {
+	serialized, _ := json.Marshal(reflect.ValueOf(resource).Elem().FieldByName("Spec").Interface())
 
 	h := sha256.New()
 
@@ -394,7 +465,7 @@ func getConsulServiceRouteContentSHA(serviceRoute *v1alpha1.ConsulServiceRoute) 
 }
 
 func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client.Client, expected *v1alpha1.ConsulServiceRoute) error {
-	expectedSHA := getConsulServiceRouteContentSHA(expected)
+	expectedSHA := getResourceContentSHA(expected)
 
 	hasTimedOut := retryWithSleep(func() bool {
 		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
@@ -407,6 +478,25 @@ func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client
 
 	if hasTimedOut {
 		return fmt.Errorf("ConsulServiceRoute sync timeout exceeded")
+	}
+
+	return nil
+}
+
+func waitForConsulServiceIntentionsSourceToBeUpToDate(ctx context.Context, k8sClient client.Client, expected *v1alpha1.ConsulServiceIntentionsSource) error {
+	expectedSHA := getResourceContentSHA(expected)
+
+	hasTimedOut := retryWithSleep(func() bool {
+		existing, _ := GetConsulServiceIntentionsSource(ctx, k8sClient, expected.Name)
+		if existing.Status.ContentSHA == expectedSHA {
+			return true
+		}
+
+		return false
+	})
+
+	if hasTimedOut {
+		return fmt.Errorf("ConsulServiceIntentionsSource sync timeout exceeded")
 	}
 
 	return nil

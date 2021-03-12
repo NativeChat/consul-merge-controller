@@ -17,6 +17,9 @@ var (
 	// ServiceRouterLabel is the name of the label which stores the service router name.
 	ServiceRouterLabel = fmt.Sprintf("%s/service-router", ServiceGroup)
 
+	// ServiceIntentins is the name of the label which stores the service intentions name.
+	ServiceIntentins = fmt.Sprintf("%s/service-intentions", ServiceGroup)
+
 	// ServiceFinalizer is the name of the service finalizer.
 	ServiceFinalizer = fmt.Sprintf("finalizer.%s", ServiceGroup)
 )
