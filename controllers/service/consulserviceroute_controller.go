@@ -18,20 +18,19 @@ package service
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"time"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
-	e "github.com/NativeChat/consul-merge-controller/pkg/errors"
+	"github.com/NativeChat/consul-merge-controller/pkg/finalizers"
 	controllerlabels "github.com/NativeChat/consul-merge-controller/pkg/labels"
+	"github.com/NativeChat/consul-merge-controller/pkg/reconcile"
 	"github.com/NativeChat/consul-merge-controller/pkg/services"
 )
 
@@ -58,73 +57,33 @@ type ConsulServiceRouteReconciler struct {
 func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("consulserviceroute", req.NamespacedName)
 
-	log.Info("starting reconcile")
+	crdService := services.NewCRDService(
+		r.Client,
+		r.Client,
+		log,
+		finalizers.ConsulServiceRouteFinalizerName,
+		reflect.TypeOf(v1alpha1.ConsulServiceRoute{}),
+		reflect.TypeOf(v1alpha1.ConsulServiceRouteList{}),
+	)
+	merger := services.NewMerger(
+		r.Client,
+		r.Client,
+		log,
+		"Routes",
+		"Route",
+		reflect.TypeOf(consulk8s.ServiceRouter{}),
+	)
+	reconciler := reconcile.NewReconciler(
+		r,
+		crdService,
+		merger,
+		log,
+		controllerlabels.ServiceRouter,
+	)
 
-	consulServiceRouteService := services.NewConsulServiceRouteService(r, r, log)
-	serviceRouterService := services.NewServiceRouterService(r, r, log)
+	res, err := reconciler.Reconcile(ctx, req)
 
-	consulServiceRoute, res, err := consulServiceRouteService.GetConsulServiceRouteFromReq(ctx, req)
-	if err != nil || res != nil {
-		return *res, err
-	}
-
-	reconcileAction := "triggered by dependency change"
-	isChanged := consulServiceRouteService.IsChanged(*consulServiceRoute)
-	isDeleted := consulServiceRouteService.IsDeleted(*consulServiceRoute)
-	if consulServiceRouteService.IsNew(*consulServiceRoute) {
-		reconcileAction = "create"
-	} else if isChanged {
-		reconcileAction = "change"
-	} else if isDeleted {
-		reconcileAction = "delete"
-	}
-
-	log.Info(fmt.Sprintf("reconcile action is: %s", reconcileAction))
-
-	serviceRouterName, ok := consulServiceRoute.Labels[controllerlabels.ServiceRouter]
-	if !ok || len(serviceRouterName) == 0 {
-		return ctrl.Result{}, apierrors.NewBadRequest(fmt.Sprintf("%s label is required", controllerlabels.ServiceRouter))
-	}
-
-	namespace := req.Namespace
-	consulServiceRoutes, err := consulServiceRouteService.GetServiceRoutesForServiceRouter(ctx, serviceRouterName, namespace)
-	if err != nil {
-		log.Error(err, "failed to get consul service routes")
-		if errors.Is(err, e.ErrReconcile) {
-			return ctrl.Result{Requeue: err.(*e.ReconcileError).ShouldRequeue}, err
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	res, err = serviceRouterService.WriteServiceRouter(ctx, serviceRouterName, namespace, consulServiceRoutes)
-	if err != nil || res != nil {
-		return *res, err
-	}
-
-	err = consulServiceRouteService.UpdateFinalizer(ctx, consulServiceRoute)
-	if err != nil {
-		log.Error(err, "failed to update the finalizer for the consul service route")
-
-		return ctrl.Result{Requeue: true}, err
-	}
-
-	if !isDeleted && isChanged {
-		consulServiceRoute.Status.UpdatedAt = time.Now().String()
-		consulServiceRoute.Status.ContentSHA = consulServiceRouteService.GetContentSHA(*consulServiceRoute)
-
-		log.Info("updating the status of the consul service route")
-		err = r.Status().Update(ctx, consulServiceRoute)
-		if err != nil {
-			log.Error(err, "failed to update the status of the consul service route")
-
-			return ctrl.Result{Requeue: true}, err
-		}
-
-		log.Info("successfully updated the status of the consul service route")
-	}
-
-	return ctrl.Result{}, nil
+	return res, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
