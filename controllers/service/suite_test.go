@@ -50,7 +50,7 @@ func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
+		"Controller Suite Service",
 		[]Reporter{printer.NewlineReporter{}})
 }
 
@@ -74,8 +74,6 @@ var _ = BeforeSuite(func() {
 	// Setup the scheme.
 	err = consulk8s.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = servicev1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
 
 	err = servicev1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
@@ -90,7 +88,7 @@ var _ = BeforeSuite(func() {
 	err = testutils.StartConsulLocalEnv()
 	Expect(err).NotTo(HaveOccurred())
 
-	testutils.StartConsulServiceRouteController(k8sClient)
+	testutils.StartControllers(k8sClient)
 }, 60)
 
 var _ = AfterSuite(func() {
