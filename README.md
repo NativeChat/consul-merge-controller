@@ -97,6 +97,65 @@ Kubernetes controller which merges Consul CRD resources.
             service: service-a-pr2
     ```
 
+<br />
+
+2. kind: `ServiceIntentions` (apiVersion: `consul.hashicorp.com/v1alpha1`) using the `ConsulServiceIntentionsSource` CRD provided by this controller.
+
+    Example input:
+    ```YAML
+    apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+    kind: ConsulServiceIntentionsSource
+    metadata:
+      name: service-a-v1-to-service-b-v1
+      labels:
+        service.consul.k8s.nativechat.com/service-intentions: service-b-v1
+    spec:
+      source:
+        name: service-a-v1
+        action: allow
+
+    ---
+    apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+    kind: ConsulServiceIntentionsSource
+    metadata:
+      name: service-a-pr1-to-service-b-v1
+      labels:
+        service.consul.k8s.nativechat.com/service-intentions: service-b-v1
+    spec:
+      source:
+        name: service-a-pr1
+        action: allow
+
+    ---
+    apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+    kind: ConsulServiceIntentionsSource
+    metadata:
+      name: service-c-v1-to-service-b-v1
+      labels:
+        service.consul.k8s.nativechat.com/service-intentions: service-b-v1
+    spec:
+      source:
+        name: service-c-v1
+        action: allow
+    ```
+    Example result:
+    ```YAML
+    apiVersion: consul.hashicorp.com/v1alpha1
+    kind: ServiceIntentions
+    metadata:
+      name: service-b-v1
+    spec:
+      destination:
+        name: service-b-v1
+      sources:
+      - action: allow
+        name: service-a-v1
+      - action: allow
+        name: service-a-pr1
+      - action: allow
+        name: service-c-v1
+    ```
+
 ## Local development
 1. Install the Golang dependencies
     ```bash

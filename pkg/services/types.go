@@ -21,20 +21,28 @@ import (
 
 	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// ConsulServiceRouteService provides methods for working with consul service routes.
-type ConsulServiceRouteService interface {
-	GetConsulServiceRouteFromReq(ctx context.Context, req ctrl.Request) (*servicev1alpha1.ConsulServiceRoute, *ctrl.Result, error)
-	GetServiceRoutesForServiceRouter(ctx context.Context, serviceRouterName, namespace string) ([]servicev1alpha1.ConsulServiceRoute, error)
-	UpdateFinalizer(ctx context.Context, serviceRoute *servicev1alpha1.ConsulServiceRoute) error
-	IsDeleted(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
-	IsNew(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
-	IsChanged(serviceRoute servicev1alpha1.ConsulServiceRoute) bool
-	GetContentSHA(serviceRoute servicev1alpha1.ConsulServiceRoute) string
-}
 
 // ServiceRouterService provides methods for working with service routers.
 type ServiceRouterService interface {
 	WriteServiceRouter(ctx context.Context, serviceRouterName, namespace string, consulServiceRoutes []servicev1alpha1.ConsulServiceRoute) (*ctrl.Result, error)
+}
+
+// CRDService provides methods for working with custom resources.
+type CRDService interface {
+	GetResourceFromRequest(ctx context.Context, req ctrl.Request) (client.Object, *ctrl.Result, error)
+	GetAllResourcesForService(ctx context.Context, label, serviceName, namespace string) ([]client.Object, error)
+	UpdateFinalizer(ctx context.Context, obj client.Object) error
+	IsDeleted(obj client.Object) bool
+	IsNew(obj client.Object) bool
+	IsChanged(obj client.Object) bool
+	GetContentSHA(obj client.Object) string
+	SetUpdatedAt(obj client.Object, updatedAt string)
+	SetContentSHA(obj client.Object, contentSHA string)
+}
+
+// Merger provides methods for merging items into a destination property of a k8s object.
+type Merger interface {
+	Merge(ctx context.Context, destinationResourceName, namespace string, items []client.Object) (*ctrl.Result, error)
 }

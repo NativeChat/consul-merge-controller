@@ -14,18 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package labels
+package reconcile
 
 import (
-	"fmt"
+	"context"
 
-	servicev1alpha1 "github.com/NativeChat/consul-merge-controller/apis/service/v1alpha1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var (
-	// ServiceRouter is the name of the label which stores the service router name.
-	ServiceRouter = fmt.Sprintf("%s/service-router", servicev1alpha1.GroupVersion.Group)
-
-	// ServiceIntentions is the name of the label which stores the service intentions name.
-	ServiceIntentions = fmt.Sprintf("%s/service-intentions", servicev1alpha1.GroupVersion.Group)
-)
+// Reconciler provides methods for merge reconciliation.
+type Reconciler interface {
+	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
+}

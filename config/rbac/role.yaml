@@ -9,6 +9,32 @@ rules:
 - apiGroups:
   - consul.hashicorp.com
   resources:
+  - serviceintentions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - consul.hashicorp.com
+  resources:
+  - serviceintentions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - consul.hashicorp.com
+  resources:
+  - serviceintentions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - consul.hashicorp.com
+  resources:
   - servicerouters
   verbs:
   - create
@@ -28,6 +54,32 @@ rules:
   - consul.hashicorp.com
   resources:
   - servicerouters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources/status
   verbs:
   - get
   - patch

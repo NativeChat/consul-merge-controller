@@ -1,0 +1,24 @@
+# permissions for end users to edit consulserviceintentionssources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulserviceintentionssource-editor-role
+rules:
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - service.consul.k8s.nativechat.com
+  resources:
+  - consulserviceintentionssources/status
+  verbs:
+  - get

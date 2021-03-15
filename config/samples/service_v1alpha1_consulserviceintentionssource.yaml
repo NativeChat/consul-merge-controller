@@ -1,0 +1,10 @@
+apiVersion: service.consul.k8s.nativechat.com/v1alpha1
+kind: ConsulServiceIntentionsSource
+metadata:
+  name: service-a-v1-to-service-b-v1
+  labels:
+    service.consul.k8s.nativechat.com/service-intentions: service-b-v1
+spec:
+  source:
+    name: service-a-v1
+    action: allow

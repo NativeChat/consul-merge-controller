@@ -34,52 +34,57 @@ import (
 	"github.com/NativeChat/consul-merge-controller/pkg/services"
 )
 
-// ConsulServiceRouteReconciler reconciles a ConsulServiceRoute object
-type ConsulServiceRouteReconciler struct {
+// ConsulServiceIntentionsSourceReconciler reconciles a ConsulServiceIntentionsSource object
+type ConsulServiceIntentionsSourceReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceroutes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceroutes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceroutes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceintentionssources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceintentionssources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=service.consul.k8s.nativechat.com,resources=consulserviceintentionssources/finalizers,verbs=update
 
-// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=servicerouters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=serviceintentions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=serviceintentions/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=consul.hashicorp.com,resources=serviceintentions/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
-func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("consulserviceroute", req.NamespacedName)
+func (r *ConsulServiceIntentionsSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("consulserviceintentionssource", req.NamespacedName)
+
+	patchExpectedDefinition := func(obj client.Object) client.Object {
+		serviceIntentions := obj.(*consulk8s.ServiceIntentions)
+
+		serviceIntentions.Spec.Destination.Name = obj.GetName()
+
+		return serviceIntentions
+	}
 
 	crdService := services.NewCRDService(
 		r.Client,
 		r.Client,
 		log,
 		finalizers.ConsulServiceRouteFinalizerName,
-		reflect.TypeOf(v1alpha1.ConsulServiceRoute{}),
-		reflect.TypeOf(v1alpha1.ConsulServiceRouteList{}),
+		reflect.TypeOf(v1alpha1.ConsulServiceIntentionsSource{}),
+		reflect.TypeOf(v1alpha1.ConsulServiceIntentionsSourceList{}),
 	)
 	merger := services.NewMerger(
 		r.Client,
 		r.Client,
 		log,
-		nil,
-		"Routes",
-		"Route",
-		reflect.TypeOf(consulk8s.ServiceRouter{}),
+		patchExpectedDefinition,
+		"Sources",
+		"Source",
+		reflect.TypeOf(consulk8s.ServiceIntentions{}),
 	)
 	reconciler := reconcile.NewReconciler(
 		r,
 		crdService,
 		merger,
 		log,
-		controllerlabels.ServiceRouter,
+		controllerlabels.ServiceIntentions,
 	)
 
 	res, err := reconciler.Reconcile(ctx, req)
@@ -88,9 +93,8 @@ func (r *ConsulServiceRouteReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ConsulServiceRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ConsulServiceIntentionsSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&servicev1alpha1.ConsulServiceRoute{}).
-		Owns(&consulk8s.ServiceRouter{}).
+		For(&servicev1alpha1.ConsulServiceIntentionsSource{}).
 		Complete(r)
 }
