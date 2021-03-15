@@ -157,11 +157,9 @@ func waitForConsulServiceIntentionsSourceToBeUpToDate(ctx context.Context, k8sCl
 
 	hasTimedOut := retryWithSleep(func() bool {
 		existing, _ := GetConsulServiceIntentionsSource(ctx, k8sClient, expected.Name)
-		if existing.Status.ContentSHA == expectedSHA {
-			return true
-		}
+		result := existing.Status.ContentSHA == expectedSHA
 
-		return false
+		return result
 	})
 
 	if hasTimedOut {

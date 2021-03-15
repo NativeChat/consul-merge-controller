@@ -41,11 +41,8 @@ func WaitForServiceRouterToBeCreated(ctx context.Context, k8sClient client.Clien
 
 	hasTimedOut := retryWithSleep(func() bool {
 		exists, _ := getK8sObject(ctx, k8sClient, name, serviceRouter)
-		if exists {
-			return true
-		}
 
-		return false
+		return exists
 	})
 
 	if hasTimedOut {

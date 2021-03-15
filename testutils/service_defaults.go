@@ -46,11 +46,9 @@ func CreateServiceDefaults(ctx context.Context, k8sClient client.Client, service
 	hasTimedOut := retryWithSleep(func() bool {
 		sd := new(consulk8s.ServiceDefaults)
 		_, err = getK8sObject(ctx, k8sClient, service, sd)
-		if len(sd.Status.Conditions) > 0 && sd.Status.Conditions[0].Status == "True" {
-			return true
-		}
+		isSynced := len(sd.Status.Conditions) > 0 && sd.Status.Conditions[0].Status == "True"
 
-		return false
+		return isSynced
 	})
 
 	if hasTimedOut {

@@ -26,6 +26,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	serviceIntentionsSourceActionAllow = "allow"
+)
+
 var _ = Describe("ConsulServiceIntentionsSource controller", func() {
 	var ctx context.Context
 
@@ -46,12 +50,12 @@ var _ = Describe("ConsulServiceIntentionsSource controller", func() {
 	Context("Merge", func() {
 		It("should merge multiple service intentions correctly", func() {
 			serviceASources := []*consulk8s.SourceIntention{
-				{Name: serviceBV1, Action: "allow"},
-				{Name: serviceBV2, Action: "allow"},
+				{Name: serviceBV1, Action: serviceIntentionsSourceActionAllow},
+				{Name: serviceBV2, Action: serviceIntentionsSourceActionAllow},
 			}
 			serviceBSources := []*consulk8s.SourceIntention{
-				{Name: serviceAV1, Action: "allow"},
-				{Name: serviceAV2, Action: "allow"},
+				{Name: serviceAV1, Action: serviceIntentionsSourceActionAllow},
+				{Name: serviceAV2, Action: serviceIntentionsSourceActionAllow},
 			}
 
 			services := map[string][]*consulk8s.SourceIntention{
@@ -85,9 +89,9 @@ var _ = Describe("ConsulServiceIntentionsSource controller", func() {
 
 		BeforeEach(func() {
 			serviceIntentionsSources = []*consulk8s.SourceIntention{
-				{Name: serviceB, Action: "allow"},
-				{Name: serviceBV1, Action: "allow"},
-				{Name: serviceBV2, Action: "allow"},
+				{Name: serviceB, Action: serviceIntentionsSourceActionAllow},
+				{Name: serviceBV1, Action: serviceIntentionsSourceActionAllow},
+				{Name: serviceBV2, Action: serviceIntentionsSourceActionAllow},
 			}
 
 			serviceIntentionsNames = testutils.CreateConsulServiceIntentionsSources(ctx, k8sClient, serviceA, serviceIntentionsSources)
@@ -176,12 +180,12 @@ var _ = Describe("ConsulServiceIntentionsSource controller", func() {
 
 	It("should delete the service router if all routes for it are deleted.", func() {
 		serviceASources := []*consulk8s.SourceIntention{
-			{Name: serviceBV1, Action: "allow"},
-			{Name: serviceBV2, Action: "allow"},
+			{Name: serviceBV1, Action: serviceIntentionsSourceActionAllow},
+			{Name: serviceBV2, Action: serviceIntentionsSourceActionAllow},
 		}
 		serviceBSources := []*consulk8s.SourceIntention{
-			{Name: serviceAV1, Action: "allow"},
-			{Name: serviceAV2, Action: "allow"},
+			{Name: serviceAV1, Action: serviceIntentionsSourceActionAllow},
+			{Name: serviceAV2, Action: serviceIntentionsSourceActionAllow},
 		}
 
 		services := map[string][]*consulk8s.SourceIntention{

@@ -137,11 +137,9 @@ func waitForConsulServiceRouteToBeUpToDate(ctx context.Context, k8sClient client
 
 	hasTimedOut := retryWithSleep(func() bool {
 		existing, _ := GetConsulServiceRoute(ctx, k8sClient, expected.Name)
-		if existing.Status.ContentSHA == expectedSHA {
-			return true
-		}
+		result := existing.Status.ContentSHA == expectedSHA
 
-		return false
+		return result
 	})
 
 	if hasTimedOut {
