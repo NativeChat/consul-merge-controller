@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # Current Operator version
-VERSION ?= v0.2.0
+VERSION ?= v0.3.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -139,7 +139,7 @@ go-mod-vendor-hack:
 	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Create-req.Operation == "CREATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
 	sed $(SED_FLAGS) -e 's-req.Operation == v1beta1.Update-req.Operation == "UPDATE"-' "$(CONSUL_K8S_DIR)/api/v1alpha1/serviceintentions_webhook.go"
 
-TEST_CONSUL_K8S_PATH ?= https://raw.githubusercontent.com/hashicorp/consul-k8s/v0.23.0/config/crd/bases/consul.hashicorp.com_
+TEST_CONSUL_K8S_PATH ?= https://raw.githubusercontent.com/hashicorp/consul-k8s/v0.25.0/config/crd/bases/consul.hashicorp.com_
 .PHONY: setup-local-consul-test-env
 setup-local-consul-test-env:
 	kubectl apply -f $(TEST_CONSUL_K8S_PATH)ingressgateways.yaml

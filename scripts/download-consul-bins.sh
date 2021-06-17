@@ -14,10 +14,10 @@ tmp_root="/tmp"
 consul_zip_path="${tmp_root}/consul.zip"
 consul_k8s_zip_path="${tmp_root}/consul-k8s.zip"
 
-consul_version="1.9.2"
+consul_version="1.9.6"
 consul_version_string="Consul v${consul_version}"
 
-consul_k8e_version="0.23.0"
+consul_k8e_version="0.25.0"
 consul_k8e_version_string="consul-k8s v${consul_k8e_version}"
 
 if [[ $(${dest_dir}/consul --version | grep "${consul_version_string}" || echo false) != "${consul_version_string}" ]]; then
