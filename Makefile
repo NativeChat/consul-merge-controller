@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # Current Operator version
-VERSION ?= v0.3.0
+VERSION ?= v0.4.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -37,9 +37,9 @@ test: generate fmt vet manifests
 		bash scripts/download-consul-bins.sh $(ENVTEST_ASSETS_DIR); \
 		ENVTEST_ASSETS_DIR=$(ENVTEST_ASSETS_DIR) MAKEFILE_PATH=$(PWD)/Makefile go test ./controllers/... -coverprofile cover.out -ginkgo.trace
 
-# Build manager binary
+# Build consul-merge-controller binary
 manager: generate fmt vet
-	go build -o bin/manager main.go
+	go build -o bin/consul-merge-controller main.go
 
 RUN_ARGS ?= ""
 # Run against the configured Kubernetes cluster in ~/.kube/config
