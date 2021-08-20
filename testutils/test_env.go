@@ -124,7 +124,14 @@ func StartConsulLocalEnv() error {
 
 	if consulK8sCmd == nil {
 		logf.Log.Info("creating consul CRDs in the current k8s cluster")
-		err := exec.Command("make", "setup-local-consul-test-env", "-f", os.Getenv("MAKEFILE_PATH")).Run()
+		makeHackCmd := exec.Command("make", "setup-local-consul-test-env", "-f", os.Getenv("MAKEFILE_PATH"))
+
+		if showConsulLogs {
+			makeHackCmd.Stdout = os.Stdout
+			makeHackCmd.Stderr = os.Stderr
+		}
+
+		err := makeHackCmd.Run()
 		if err != nil {
 			return err
 		}
