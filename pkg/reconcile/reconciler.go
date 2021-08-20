@@ -69,7 +69,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	namespace := req.Namespace
 	resources, err := r.crdService.GetAllResourcesForService(ctx, r.queryLabel, queryValue, namespace)
 	if err != nil {
-		r.log.Error(err, "failed to get consul service routes")
+		r.log.Error(err, "failed to get all resources for service")
 		if errors.Is(err, e.ErrReconcile) {
 			return ctrl.Result{Requeue: err.(*e.ReconcileError).ShouldRequeue}, err
 		}
