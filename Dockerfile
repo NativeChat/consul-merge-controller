@@ -1,5 +1,5 @@
 # Build the consul-merge-controller binary
-FROM golang:1.15 as builder
+FROM golang:1.16 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -8,8 +8,6 @@ COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
-COPY Makefile Makefile
-RUN make go-mod-vendor-hack GO_MOD_DEPS_DIR=/go/pkg/mod CONSUL_K8S_VERSION=@v0.25.0
 
 # Copy the go source
 COPY main.go main.go

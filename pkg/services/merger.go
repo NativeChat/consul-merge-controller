@@ -96,6 +96,8 @@ func (m *merger) Merge(ctx context.Context, destinationResourceName, namespace s
 	err = m.writer.Update(ctx, actual)
 	if err != nil {
 		m.log.Error(err, fmt.Sprintf("failed to update %s", destinationResourceKind))
+
+		return &ctrl.Result{}, err
 	}
 
 	m.log.Info(fmt.Sprintf("%s updated", destinationResourceKind))

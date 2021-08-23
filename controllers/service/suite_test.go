@@ -17,10 +17,8 @@ limitations under the License.
 package service_test
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"testing"
-	"time"
 
 	consulk8s "github.com/hashicorp/consul-k8s/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -59,7 +57,8 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing: true,
 	}
 
 	// Start the test env.
@@ -68,7 +67,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	// Generate and save the test kubeconfig.
-	err = testutils.CreateAndSetTestKubeconfig(cfg.Host)
+	err = testutils.CreateAndSetTestKubeconfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Setup the scheme.
@@ -85,18 +84,18 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	// Start test consul env.
-	err = testutils.StartConsulLocalEnv()
+	err = testutils.StartConsulLocalEnv(testEnv.Config)
 	Expect(err).NotTo(HaveOccurred())
 
 	testutils.StartControllers(k8sClient)
 }, 60)
 
 var _ = AfterSuite(func() {
-	ioutil.WriteFile("/tmp/suite", []byte("after suite "+time.Now().String()), 0644)
 	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
 
-	err = testutils.StopConsulLocalEnv()
-	Expect(err).NotTo(HaveOccurred())
+	stopConsulErr := testutils.StopConsulLocalEnv()
+	stopTestEnvErr := testEnv.Stop()
+
+	Expect(stopConsulErr).NotTo(HaveOccurred())
+	Expect(stopTestEnvErr).NotTo(HaveOccurred())
 })

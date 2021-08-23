@@ -17,7 +17,8 @@
             "request": "launch",
             "mode": "test",
             "env": {
-                "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin",
+                // The value for this variable can be found in the "make test" command output.
+                "KUBEBUILDER_ASSETS": "",
                 "ENVTEST_ASSETS_DIR": "${workspaceFolder}/testbin",
                 "MAKEFILE_PATH": "${workspaceFolder}/Makefile",
                 "SHOW_CONSUL_LOGS": "false",
