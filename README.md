@@ -161,11 +161,7 @@ Kubernetes controller which merges Consul CRD resources.
     ```bash
     go mod vendor
     ```
-2. Fix the dependency versioning issue with `consul-k8s`. This step will be removed when `consul-k8s` starts using the new `controller-runtime`.
-    ```bash
-    make go-mod-vendor-hack
-    ```
-3. Run the controller
+2. Run the controller
     ```bash
     make run
     ```

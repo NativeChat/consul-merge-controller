@@ -18,16 +18,17 @@ package testutils
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"time"
 
+	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
 	"github.com/NativeChat/consul-merge-controller/controllers/service"
+	"k8s.io/client-go/rest"
 	apiv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,20 +71,22 @@ func StartControllers(k8sClient client.Client) {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	go func() {
+		defer ginkgo.GinkgoRecover()
+
 		err = mgr.Start(ctrl.SetupSignalHandler())
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}()
 }
 
 // CreateAndSetTestKubeconfig ...
-func CreateAndSetTestKubeconfig(hostWithPort string) error {
+func CreateAndSetTestKubeconfig(cfg *rest.Config) error {
 	kubeconfig := apiv1.Config{
 		APIVersion:     "v1",
 		Kind:           "Config",
 		CurrentContext: "default",
-		Clusters:       []apiv1.NamedCluster{{Name: "default", Cluster: apiv1.Cluster{Server: fmt.Sprintf("http://%s", hostWithPort)}}},
+		Clusters:       []apiv1.NamedCluster{{Name: "default", Cluster: apiv1.Cluster{Server: cfg.Host, CertificateAuthorityData: cfg.CAData}}},
 		Contexts:       []apiv1.NamedContext{{Name: "default", Context: apiv1.Context{Cluster: "default", Namespace: DefaultK8sNamespace, AuthInfo: "admin"}}},
-		AuthInfos:      []apiv1.NamedAuthInfo{{Name: "admin", AuthInfo: apiv1.AuthInfo{Username: "admin", Password: ""}}},
+		AuthInfos:      []apiv1.NamedAuthInfo{{Name: "admin", AuthInfo: apiv1.AuthInfo{Username: "admin", ClientCertificateData: cfg.CertData, ClientKeyData: cfg.KeyData}}},
 	}
 
 	serializedConfig, err := json.Marshal(kubeconfig)
@@ -102,7 +105,7 @@ func CreateAndSetTestKubeconfig(hostWithPort string) error {
 }
 
 // StartConsulLocalEnv ...
-func StartConsulLocalEnv() error {
+func StartConsulLocalEnv(config *rest.Config) error {
 	if consulCmd == nil {
 		logf.Log.Info("starting local consul")
 
